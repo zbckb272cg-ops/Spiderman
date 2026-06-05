@@ -3,205 +3,820 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spider App - Telegram Auto Message</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>🕷️ Spider App - Telegram Broadcaster</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .setup-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .setup-modal.active {
+            display: flex;
+        }
+
+        .setup-container {
+            background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+            border: 2px solid #d32f2f;
+            border-radius: 15px;
+            padding: 40px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(211, 47, 47, 0.3);
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .setup-container h1 {
+            color: #d32f2f;
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .setup-container p {
+            color: #bbb;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .setup-container .form-group {
+            margin-bottom: 20px;
+        }
+
+        .setup-container label {
+            display: block;
+            color: #d32f2f;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .setup-container input {
+            width: 100%;
+            padding: 12px 15px;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .setup-container input:focus {
+            outline: none;
+            border-color: #d32f2f;
+            box-shadow: 0 0 10px rgba(211, 47, 47, 0.3);
+        }
+
+        .setup-container input::placeholder {
+            color: #666;
+        }
+
+        .setup-container button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+
+        .setup-container button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(211, 47, 47, 0.4);
+        }
+
+        .setup-info {
+            background: rgba(211, 47, 47, 0.1);
+            border-left: 3px solid #d32f2f;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #bbb;
+            line-height: 1.5;
+        }
+
+        .container {
+            display: none;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .container.active {
+            display: flex;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            border-bottom: 2px solid #d32f2f;
+            padding: 20px 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        header h1 {
+            color: #d32f2f;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            padding: 0 30px;
+            gap: 5px;
+        }
+
+        .tab-btn {
+            padding: 15px 20px;
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            color: #d32f2f;
+        }
+
+        .tab-btn.active {
+            color: #d32f2f;
+            border-bottom-color: #d32f2f;
+        }
+
+        .content {
+            flex: 1;
+            padding: 30px;
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .content.active {
+            display: flex;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h2 {
+            color: #d32f2f;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #aaa;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #d32f2f;
+            box-shadow: 0 0 8px rgba(211, 47, 47, 0.2);
+            background: #222;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            background: #d32f2f;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: #b71c1c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(211, 47, 47, 0.4);
+        }
+
+        .btn.secondary {
+            background: #555;
+        }
+
+        .btn.secondary:hover {
+            background: #666;
+        }
+
+        .btn.small {
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        .list-item {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .list-item:hover {
+            border-color: #d32f2f;
+            background: #222;
+        }
+
+        .list-item-info {
+            flex: 1;
+        }
+
+        .list-item-info h3 {
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .list-item-info p {
+            color: #888;
+            font-size: 12px;
+        }
+
+        .list-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #333;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .checkbox-item:hover {
+            border-color: #d32f2f;
+            background: #222;
+        }
+
+        .checkbox-item input {
+            margin-right: 10px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: #d32f2f;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            flex: 1;
+            font-size: 13px;
+            color: #ccc;
+        }
+
+        .logs-list {
+            max-height: 500px;
+            overflow-y: auto;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 0;
+        }
+
+        .log-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #222;
+            font-size: 12px;
+            color: #aaa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .log-item:last-child {
+            border-bottom: none;
+        }
+
+        .log-item.success {
+            color: #4caf50;
+        }
+
+        .log-item.error {
+            color: #ff6b6b;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #aaa;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            color: #d32f2f;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert.success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4caf50;
+            color: #4caf50;
+        }
+
+        .alert.error {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d32f2f;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            header h1 { font-size: 20px; }
+            .tabs { overflow-x: auto; padding: 0 15px; }
+            .content { padding: 15px; }
+            .checkbox-group { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .broadcast-form { display: grid; gap: 20px; }
+        .form-section { background: #1a1a1a; padding: 15px; border-radius: 6px; border: 1px solid #333; }
+        .form-section h3 { color: #d32f2f; font-size: 14px; margin-bottom: 12px; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    </style>
 </head>
 <body>
-    <div id="app-container">
-        <!-- Init Modal -->
-        <div id="init-modal" class="modal">
-            <div class="modal-content init-content">
-                <h2>🕷️ Spider App - First Time Setup</h2>
-                <form id="init-form">
-                    <div class="form-group">
-                        <label for="api-id">API ID:</label>
-                        <input type="text" id="api-id" placeholder="Enter your Telegram API ID" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="api-hash">API Hash:</label>
-                        <input type="password" id="api-hash" placeholder="Enter your Telegram API Hash" required>
-                    </div>
-                    <div class="form-group checkbox">
-                        <input type="checkbox" id="auto-start">
-                        <label for="auto-start">Auto Start on App Open</label>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Save & Continue</button>
-                </form>
+    <div class="setup-modal" id="setupModal">
+        <div class="setup-container">
+            <h1>🕷️ Spider App</h1>
+            <p>First-time Setup - Save Once, Never Ask Again</p>
+            
+            <div class="setup-info">
+                <strong>Get your API credentials from:</strong><br>
+                <a href="https://my.telegram.org/apps" style="color: #d32f2f; text-decoration: none;" target="_blank">https://my.telegram.org/apps</a>
             </div>
-        </div>
-
-        <!-- Main App -->
-        <div id="main-app" style="display: none;">
-            <nav class="sidebar">
-                <div class="logo">
-                    <span>🕷️ Spider</span>
+            
+            <form id="setupForm">
+                <div class="form-group">
+                    <label for="apiId">API ID</label>
+                    <input type="text" id="apiId" placeholder="Enter your Telegram API ID" required autofocus>
                 </div>
-                <ul class="nav-menu">
-                    <li><a href="#" onclick="showTab('dashboard', event)" class="nav-item active">📊 Dashboard</a></li>
-                    <li><a href="#" onclick="showTab('accounts', event)" class="nav-item">👤 Accounts</a></li>
-                    <li><a href="#" onclick="showTab('broadcast', event)" class="nav-item">📢 Broadcast</a></li>
-                    <li><a href="#" onclick="showTab('logs', event)" class="nav-item">📝 Logs</a></li>
-                    <li><a href="#" onclick="showTab('settings', event)" class="nav-item">⚙️ Settings</a></li>
-                </ul>
-                <div class="start-btn-container">
-                    <button id="start-btn" class="btn btn-success btn-block">▶️ START SERVICE</button>
+                
+                <div class="form-group">
+                    <label for="apiHash">API Hash</label>
+                    <input type="text" id="apiHash" placeholder="Enter your Telegram API Hash" required>
                 </div>
-            </nav>
-
-            <div class="main-content">
-                <!-- Dashboard Tab -->
-                <div id="dashboard" class="tab-content active">
-                    <h1>📊 Dashboard</h1>
-                    <div class="dashboard-grid">
-                        <div class="card">
-                            <h3>Active Accounts</h3>
-                            <p id="active-accounts" class="stat-number">0</p>
-                        </div>
-                        <div class="card">
-                            <h3>Total Groups</h3>
-                            <p id="total-groups" class="stat-number">0</p>
-                        </div>
-                        <div class="card">
-                            <h3>Batch Messages</h3>
-                            <p id="batch-count" class="stat-number">0</p>
-                        </div>
-                        <div class="card">
-                            <h3>Total Logs</h3>
-                            <p id="total-logs" class="stat-number">0</p>
-                        </div>
-                    </div>
-                    <div class="recent-activity">
-                        <h2>Recent Activity</h2>
-                        <div id="recent-logs" class="logs-list"></div>
-                    </div>
-                </div>
-
-                <!-- Accounts Tab -->
-                <div id="accounts" class="tab-content">
-                    <h1>👤 Accounts Management</h1>
-                    <div class="accounts-toolbar">
-                        <button onclick="showAddAccountForm()" class="btn btn-primary">+ Add Account</button>
-                        <button onclick="loadAllAccountsGroups()" class="btn btn-secondary">⬇️ Load All Groups</button>
-                    </div>
-                    <div id="add-account-form" class="form-container" style="display: none;">
-                        <form id="account-form">
-                            <div class="form-group">
-                                <label for="phone">Phone Number:</label>
-                                <input type="text" id="phone" placeholder="+1234567890" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="acc-api-id">API ID:</label>
-                                <input type="text" id="acc-api-id" placeholder="Your API ID" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="acc-api-hash">API Hash:</label>
-                                <input type="password" id="acc-api-hash" placeholder="Your API Hash" required>
-                            </div>
-                            <button type="submit" class="btn btn-success">Add Account</button>
-                            <button type="button" onclick="hideAddAccountForm()" class="btn btn-secondary">Cancel</button>
-                        </form>
-                    </div>
-                    <div id="accounts-list" class="accounts-list"></div>
-                </div>
-
-                <!-- Broadcast Tab -->
-                <div id="broadcast" class="tab-content">
-                    <h1>📢 Broadcast Messages</h1>
-                    <button onclick="showBroadcastForm()" class="btn btn-primary">+ Create Broadcast</button>
-                    
-                    <div id="broadcast-form" class="form-container" style="display: none;">
-                        <form id="broadcast-message-form">
-                            <div class="form-group">
-                                <label for="broadcast-name">Broadcast Name:</label>
-                                <input type="text" id="broadcast-name" placeholder="e.g., Daily Update" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Select Accounts:</label>
-                                <div class="selection-controls">
-                                    <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllAccounts()">✓ Select All</button>
-                                    <button type="button" class="btn btn-secondary btn-sm" onclick="deselectAllAccounts()">✗ Deselect All</button>
-                                </div>
-                                <div id="broadcast-accounts-list" class="checkbox-list"></div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Select Groups:</label>
-                                <div class="selection-controls">
-                                    <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllGroups()">✓ Select All</button>
-                                    <button type="button" class="btn btn-secondary btn-sm" onclick="deselectAllGroups()">✗ Deselect All</button>
-                                </div>
-                                <div id="broadcast-groups-list" class="checkbox-list"></div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="broadcast-message">Message:</label>
-                                <textarea id="broadcast-message" placeholder="Enter message to broadcast" required></textarea>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="broadcast-delay">Delay Between Messages (seconds): <span id="broadcast-delay-value">5</span>s</label>
-                                <input type="range" id="broadcast-delay" min="5" max="300" value="5" step="5">
-                                <small>Minimum: 5s | Maximum: 300s</small>
-                            </div>
-                            
-                            <div class="form-group checkbox">
-                                <input type="checkbox" id="broadcast-auto-repeat">
-                                <label for="broadcast-auto-repeat">Auto Repeat</label>
-                            </div>
-                            
-                            <div class="form-group" id="broadcast-repeat-group" style="display: none;">
-                                <label for="broadcast-repeat-interval">Repeat Interval (seconds):</label>
-                                <input type="number" id="broadcast-repeat-interval" min="10" value="60" required>
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-success">Create & Schedule</button>
-                                <button type="button" onclick="hideBroadcastForm()" class="btn btn-secondary">Cancel</button>
-                            </div>
-                        </form>
-                    </div>
-                    
-                    <div id="broadcasts-list" class="broadcasts-list"></div>
-                </div>
-
-                <!-- Logs Tab -->
-                <div id="logs" class="tab-content">
-                    <h1>📝 Activity Logs</h1>
-                    <div class="logs-toolbar">
-                        <button onclick="refreshLogs()" class="btn btn-secondary">🔄 Refresh</button>
-                        <button onclick="clearAllLogs()" class="btn btn-danger">🗑️ Clear Logs</button>
-                    </div>
-                    <div id="logs-container" class="logs-list"></div>
-                </div>
-
-                <!-- Settings Tab -->
-                <div id="settings" class="tab-content">
-                    <h1>⚙️ Settings</h1>
-                    <div class="settings-group">
-                        <h2>Theme</h2>
-                        <div class="form-group">
-                            <label><input type="radio" name="theme" value="dark" checked> Dark Theme</label>
-                            <label><input type="radio" name="theme" value="light"> Light Theme</label>
-                        </div>
-                    </div>
-                    <div class="settings-group">
-                        <h2>General Settings</h2>
-                        <div class="form-group checkbox">
-                            <input type="checkbox" id="settings-auto-start">
-                            <label for="settings-auto-start">Auto Start Service on Launch</label>
-                        </div>
-                    </div>
-                    <div class="settings-group">
-                        <h2>About</h2>
-                        <p>🕷️ Spider App v1.0 - Telegram Auto Message System</p>
-                        <p>Built with Telethon & Flask for multi-account broadcasting</p>
-                    </div>
-                </div>
-            </div>
+                
+                <button type="submit" class="btn" style="width: 100%;">✓ Save & Continue</button>
+            </form>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <div class="container" id="mainContainer">
+        <header>
+            <h1>🕷️ Spider App - Telegram Broadcaster v2.0</h1>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
+            <button class="tab-btn" data-tab="accounts">👤 Accounts</button>
+            <button class="tab-btn" data-tab="broadcast">📢 Broadcast</button>
+            <button class="tab-btn" data-tab="logs">📋 Logs</button>
+        </div>
+
+        <div class="content active" id="dashboard">
+            <div class="stats-grid">
+                <div class="stat-card"><h3>Active Accounts</h3><div class="value" id="statAccounts">0</div></div>
+                <div class="stat-card"><h3>Total Groups</h3><div class="value" id="statGroups">0</div></div>
+                <div class="stat-card"><h3>Saved Broadcasts</h3><div class="value" id="statBroadcasts">0</div></div>
+                <div class="stat-card"><h3>Total Logs</h3><div class="value" id="statLogs">0</div></div>
+            </div>
+            <div class="card"><h2>📈 Recent Activity</h2><div class="logs-list" id="recentLogs"></div></div>
+        </div>
+
+        <div class="content" id="accounts">
+            <div class="card">
+                <h2>👤 Manage Accounts</h2>
+                <button class="btn" id="addAccountBtn" style="margin-bottom: 20px;">+ Add Account</button>
+                <div id="accountsForm" style="display: none; margin-bottom: 20px;">
+                    <div class="form-group"><label>Phone Number</label><input type="text" id="accountPhone" placeholder="+1234567890"></div>
+                    <div class="btn-group"><button class="btn" id="submitAccount">Save Account</button><button class="btn secondary" id="cancelAccount" type="button">Cancel</button></div>
+                </div>
+                <div id="accountsList"></div>
+            </div>
+            <div class="card">
+                <h2>📥 Load Groups</h2>
+                <button class="btn" id="loadAllGroupsBtn" style="margin-bottom: 15px;">⬇️ Load All Groups</button>
+                <div id="loadStatus" class="alert"></div>
+            </div>
+        </div>
+
+        <div class="content" id="broadcast">
+            <div class="card">
+                <h2>📢 Create & Send Broadcast (4 Simple Steps)</h2>
+                <form class="broadcast-form" id="broadcastForm">
+                    <div class="form-section">
+                        <h3>Step 1: Select Accounts</h3>
+                        <div class="btn-group" style="margin-bottom: 10px;">
+                            <button type="button" class="btn small" id="selectAllAccounts">✓ Select All</button>
+                            <button type="button" class="btn small secondary" id="deselectAllAccounts">✗ Deselect All</button>
+                        </div>
+                        <div class="checkbox-group" id="accountsList"></div>
+                    </div>
+                    <div class="form-section">
+                        <h3>Step 2: Select Groups</h3>
+                        <div class="btn-group" style="margin-bottom: 10px;">
+                            <button type="button" class="btn small" id="selectAllGroups">✓ Select All</button>
+                            <button type="button" class="btn small secondary" id="deselectAllGroups">✗ Deselect All</button>
+                        </div>
+                        <div class="checkbox-group" id="groupsList"></div>
+                    </div>
+                    <div class="form-section">
+                        <h3>Step 3: Set Message & Delay</h3>
+                        <div class="form-group"><label>Message Text</label><textarea id="messageText" placeholder="Enter your message..." required></textarea></div>
+                        <div class="form-group"><label>Delay Between Messages (seconds)</label><input type="number" id="messageDelay" min="1" max="300" value="5"></div>
+                        <div class="form-group"><label><input type="checkbox" id="autoRepeat" style="width: auto; margin-right: 8px;"> Enable Auto-Repeat</label></div>
+                        <div class="form-group" id="repeatIntervalGroup" style="display: none;"><label>Repeat Interval (seconds)</label><input type="number" id="repeatInterval" min="30" max="3600" value="300"></div>
+                    </div>
+                    <div class="form-section">
+                        <h3>Step 4: Start Broadcast</h3>
+                        <div class="btn-group"><button type="submit" class="btn">▶️ Create & Start Broadcast</button><button type="reset" class="btn secondary">↻ Reset</button></div>
+                    </div>
+                </form>
+                <div id="broadcastAlert" class="alert" style="margin-top: 20px;"></div>
+            </div>
+            <div class="card"><h2>📊 Saved Broadcasts</h2><div id="broadcastsList"></div></div>
+        </div>
+
+        <div class="content" id="logs">
+            <div class="card"><h2>📋 Activity Logs (Auto-Saving)</h2><button class="btn secondary" id="clearLogsBtn" style="margin-bottom: 15px;">🗑️ Clear Logs</button><div class="logs-list" id="logsList"></div></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+
+        function showAlert(elementId, message, type) {
+            const alert = document.getElementById(elementId);
+            alert.className = `alert show ${type}`;
+            alert.textContent = message;
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+
+        async function checkSettings() {
+            try {
+                const res = await fetch(`${API_BASE}/settings/init`);
+                const data = await res.json();
+                if (!data.settings_saved) {
+                    document.getElementById('setupModal').classList.add('active');
+                } else {
+                    document.getElementById('setupModal').classList.remove('active');
+                    document.getElementById('mainContainer').classList.add('active');
+                    loadDashboard();
+                    setInterval(loadLogs, 3000);
+                    setInterval(loadDashboard, 10000);
+                }
+            } catch (err) {
+                console.error('Error:', err);
+            }
+        }
+
+        document.getElementById('setupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const res = await fetch(`${API_BASE}/settings/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        api_id: document.getElementById('apiId').value,
+                        api_hash: document.getElementById('apiHash').value
+                    })
+                });
+                if (res.ok) {
+                    document.getElementById('setupModal').classList.remove('active');
+                    document.getElementById('mainContainer').classList.add('active');
+                    loadDashboard();
+                    setInterval(loadLogs, 3000);
+                    setInterval(loadDashboard, 10000);
+                }
+            } catch (err) { console.error(err); }
+        });
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        async function loadAccounts() {
+            try {
+                const res = await fetch(`${API_BASE}/accounts`);
+                const accounts = await res.json();
+                const checkboxes = document.querySelectorAll('.checkbox-group')[0];
+                if (checkboxes) {
+                    checkboxes.innerHTML = accounts.map(acc => `<div class="checkbox-item"><input type="checkbox" value="${acc.id}" class="account-checkbox"><label>${acc.phone}</label></div>`).join('');
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadGroups() {
+            try {
+                const res = await fetch(`${API_BASE}/accounts`);
+                const accounts = await res.json();
+                let allGroups = [];
+                for (const acc of accounts) {
+                    const res2 = await fetch(`${API_BASE}/accounts/${acc.id}/groups`);
+                    const groups = await res2.json();
+                    allGroups = allGroups.concat(groups.map(g => ({ ...g, account_id: acc.id })));
+                }
+                const checkboxes = document.querySelectorAll('.checkbox-group')[1];
+                if (checkboxes) {
+                    checkboxes.innerHTML = allGroups.map(grp => `<div class="checkbox-item"><input type="checkbox" value='${JSON.stringify({id: grp.group_id, name: grp.group_name})}' class="group-checkbox"><label>${grp.group_name}</label></div>`).join('');
+                }
+                document.getElementById('statGroups').textContent = allGroups.length;
+            } catch (err) { console.error(err); }
+        }
+
+        document.getElementById('addAccountBtn').addEventListener('click', () => {
+            document.getElementById('accountsForm').style.display = 'block';
+        });
+
+        document.getElementById('cancelAccount').addEventListener('click', () => {
+            document.getElementById('accountsForm').style.display = 'none';
+        });
+
+        document.getElementById('submitAccount').addEventListener('click', async () => {
+            const phone = document.getElementById('accountPhone').value;
+            if (!phone) return;
+            try {
+                const res = await fetch(`${API_BASE}/accounts/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, api_id: '0', api_hash: '0' })
+                });
+                if (res.ok) {
+                    showAlert('loadStatus', '✓ Account added!', 'success');
+                    document.getElementById('accountsForm').style.display = 'none';
+                    document.getElementById('accountPhone').value = '';
+                    loadAccounts();
+                    loadDashboard();
+                }
+            } catch (err) { showAlert('loadStatus', 'Error adding account', 'error'); }
+        });
+
+        document.getElementById('loadAllGroupsBtn').addEventListener('click', async () => {
+            try {
+                const res = await fetch(`${API_BASE}/accounts/load-all-groups`, { method: 'POST' });
+                if (res.ok) {
+                    showAlert('loadStatus', '✓ Groups loaded!', 'success');
+                    loadGroups();
+                }
+            } catch (err) { showAlert('loadStatus', 'Error loading groups', 'error'); }
+        });
+
+        document.getElementById('autoRepeat').addEventListener('change', (e) => {
+            document.getElementById('repeatIntervalGroup').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        document.getElementById('broadcastForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const selectedAccounts = Array.from(document.querySelectorAll('.account-checkbox:checked')).map(cb => parseInt(cb.value));
+            const selectedGroups = Array.from(document.querySelectorAll('.group-checkbox:checked')).map(cb => JSON.parse(cb.value));
+            if (!selectedAccounts.length || !selectedGroups.length) {
+                showAlert('broadcastAlert', 'Select at least one account and group', 'error');
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/batch-messages/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: document.getElementById('messageText').value,
+                        delay_seconds: parseInt(document.getElementById('messageDelay').value),
+                        auto_repeat: document.getElementById('autoRepeat').checked ? 1 : 0,
+                        repeat_interval: parseInt(document.getElementById('repeatInterval').value),
+                        selected_accounts: selectedAccounts,
+                        selected_groups: selectedGroups
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    showAlert('broadcastAlert', '✓ Broadcast started!', 'success');
+                    await fetch(`${API_BASE}/batch-messages/${data.batch_id}/execute`, { method: 'POST' });
+                    document.getElementById('broadcastForm').reset();
+                    loadBroadcasts();
+                }
+            } catch (err) { showAlert('broadcastAlert', 'Error', 'error'); }
+        });
+
+        document.getElementById('selectAllAccounts').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelectorAll('.account-checkbox').forEach(cb => cb.checked = true);
+        });
+
+        document.getElementById('deselectAllAccounts').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelectorAll('.account-checkbox').forEach(cb => cb.checked = false);
+        });
+
+        document.getElementById('selectAllGroups').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelectorAll('.group-checkbox').forEach(cb => cb.checked = true);
+        });
+
+        document.getElementById('deselectAllGroups').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelectorAll('.group-checkbox').forEach(cb => cb.checked = false);
+        });
+
+        async function loadBroadcasts() {
+            try {
+                const res = await fetch(`${API_BASE}/batch-messages`);
+                const broadcasts = await res.json();
+                const list = document.getElementById('broadcastsList');
+                list.innerHTML = broadcasts.map(b => `
+                    <div class="list-item">
+                        <div class="list-item-info"><h3>${b.name}</h3><p>${b.message.substring(0, 50)}...</p><p>Delay: ${b.delay_seconds}s | Accounts: ${b.accounts.length} | Groups: ${b.groups.length}</p></div>
+                        <button class="btn small" onclick="executeBroadcast(${b.id})">▶️ Execute</button>
+                    </div>
+                `).join('');
+                document.getElementById('statBroadcasts').textContent = broadcasts.length;
+            } catch (err) { console.error(err); }
+        }
+
+        async function executeBroadcast(id) {
+            try {
+                await fetch(`${API_BASE}/batch-messages/${id}/execute`, { method: 'POST' });
+                showAlert('broadcastAlert', '✓ Broadcast started!', 'success');
+            } catch (err) { showAlert('broadcastAlert', 'Error', 'error'); }
+        }
+
+        async function loadLogs() {
+            try {
+                const res = await fetch(`${API_BASE}/logs?limit=100`);
+                const logs = await res.json();
+                const list = document.getElementById('logsList');
+                if (list) list.innerHTML = logs.map(l => `<div class="log-item ${l.status}"><span>${new Date(l.timestamp).toLocaleTimeString()}</span><span>${l.message}</span></div>`).join('');
+                const recent = document.getElementById('recentLogs');
+                if (recent) recent.innerHTML = logs.slice(0, 10).map(l => `<div class="log-item ${l.status}"><span>${new Date(l.timestamp).toLocaleTimeString()}</span><span>${l.message}</span></div>`).join('');
+                document.getElementById('statLogs').textContent = logs.length;
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadDashboard() {
+            try {
+                const resAcc = await fetch(`${API_BASE}/accounts`);
+                const accounts = await resAcc.json();
+                document.getElementById('statAccounts').textContent = accounts.length;
+                loadAccounts();
+                const resBroadcast = await fetch(`${API_BASE}/batch-messages`);
+                const broadcasts = await resBroadcast.json();
+                document.getElementById('statBroadcasts').textContent = broadcasts.length;
+                loadGroups();
+                loadLogs();
+                loadBroadcasts();
+            } catch (err) { console.error(err); }
+        }
+
+        document.getElementById('clearLogsBtn').addEventListener('click', () => {
+            if (confirm('Clear all logs?')) {
+                document.getElementById('logsList').innerHTML = '';
+                showAlert('broadcastAlert', '✓ Logs cleared', 'success');
+            }
+        });
+
+        checkSettings();
+    </script>
 </body>
 </html>

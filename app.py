@@ -110,15 +110,16 @@ def load_settings():
     return {
         'api_id': '',
         'api_hash': '',
-        'first_time': True,
+        'settings_saved': False,
         'theme': 'dark',
         'auto_start': False
     }
 
 def save_settings(settings):
-    settings['first_time'] = False
+    settings['settings_saved'] = True
     with open(SETTINGS_FILE, 'w') as f:
         json.dump(settings, f, indent=4)
+    logger.info("Settings saved automatically")
 
 def hash_string(text):
     return hashlib.sha256(text.encode()).hexdigest()
@@ -146,7 +147,7 @@ def index():
 def get_init_settings():
     settings = load_settings()
     return jsonify({
-        'first_time': settings.get('first_time', True),
+        'settings_saved': settings.get('settings_saved', False),
         'theme': settings.get('theme', 'dark')
     })
 
@@ -156,7 +157,7 @@ def save_init_settings():
     settings = {
         'api_id': data.get('api_id'),
         'api_hash': data.get('api_hash'),
-        'first_time': False,
+        'settings_saved': True,
         'theme': data.get('theme', 'dark'),
         'auto_start': data.get('auto_start', False)
     }
@@ -192,6 +193,7 @@ def add_account():
         account_id = c.lastrowid
         conn.close()
         add_log(account_id, 'system', f'Account {phone} added', 'success')
+        logger.info(f"Account {phone} added successfully")
         return jsonify({'status': 'success', 'account_id': account_id})
     except Exception as e:
         add_log(0, 'system', f'Add account error: {str(e)}', 'error', str(e))
@@ -212,6 +214,7 @@ def load_account_groups(account_id):
         conn.close()
         
         add_log(account_id, 'system', f'Loading groups for {phone}', 'success')
+        logger.info(f"Groups loaded for {phone}")
         
         return jsonify({
             'status': 'success',
@@ -239,6 +242,7 @@ def load_all_account_groups():
             add_log(account_id, 'system', f'Loading groups for {phone}', 'success')
             results.append({'account_id': account_id, 'phone': phone, 'status': 'loaded'})
         
+        logger.info(f"Loaded groups for {len(results)} accounts")
         return jsonify({'status': 'success', 'message': f'Loaded groups for {len(results)} accounts', 'results': results})
     except Exception as e:
         logger.error(f"Error loading all groups: {str(e)}")
@@ -310,7 +314,6 @@ def get_batch_messages():
 @app.route('/api/batch-messages/create', methods=['POST'])
 def create_batch_message():
     data = request.json
-    name = data.get('name')
     message = data.get('message')
     delay_seconds = data.get('delay_seconds', 5)
     auto_repeat = data.get('auto_repeat', 0)
@@ -325,11 +328,14 @@ def create_batch_message():
         if not selected_accounts or not selected_groups:
             return jsonify({'status': 'error', 'message': 'Please select at least one account and one group'}), 400
         
+        # Auto-generate batch name
+        batch_name = f"Broadcast_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
         # Create batch message
         c.execute('''
             INSERT INTO batch_messages (name, message, delay_seconds, auto_repeat, repeat_interval, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
-        ''', (name, message, delay_seconds, auto_repeat, repeat_interval, datetime.now().isoformat()))
+        ''', (batch_name, message, delay_seconds, auto_repeat, repeat_interval, datetime.now().isoformat()))
         
         batch_id = c.lastrowid
         
@@ -350,8 +356,9 @@ def create_batch_message():
         conn.commit()
         conn.close()
         
-        add_log(0, 'system', f'Batch message created: {name} for {len(selected_accounts)} accounts and {len(selected_groups)} groups', 'success')
-        return jsonify({'status': 'success', 'batch_id': batch_id, 'message': 'Batch message created successfully'})
+        add_log(0, 'system', f'Batch message created: {batch_name} for {len(selected_accounts)} accounts and {len(selected_groups)} groups', 'success')
+        logger.info(f"Broadcast {batch_name} created successfully")
+        return jsonify({'status': 'success', 'batch_id': batch_id, 'message': 'Broadcast created successfully'})
     except Exception as e:
         logger.error(f"Error creating batch message: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 400
@@ -367,7 +374,7 @@ def execute_batch_message(batch_id):
         batch = c.fetchone()
         
         if not batch:
-            return jsonify({'status': 'error', 'message': 'Batch not found'}), 404
+            return jsonify({'status': 'error', 'message': 'Broadcast not found'}), 404
         
         message, delay_seconds, auto_repeat, repeat_interval, batch_name = batch
         
@@ -391,8 +398,9 @@ def execute_batch_message(batch_id):
         thread.daemon = True
         thread.start()
         
-        add_log(0, 'system', f'Batch message {batch_name} execution started - {len(account_ids)} accounts, {len(group_ids)} groups', 'success')
-        return jsonify({'status': 'success', 'message': f'Batch message execution started - Sending to {len(account_ids)} accounts and {len(group_ids)} groups'})
+        add_log(0, 'system', f'Broadcast {batch_name} execution started - {len(account_ids)} accounts, {len(group_ids)} groups', 'success')
+        logger.info(f"Broadcast {batch_name} started")
+        return jsonify({'status': 'success', 'message': f'Broadcast started - Sending to {len(account_ids)} accounts and {len(group_ids)} groups'})
     except Exception as e:
         logger.error(f"Error executing batch: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 400
@@ -407,14 +415,14 @@ def execute_batch_async(batch_id, batch_name, account_ids, group_ids, message, d
             for group_id in group_ids:
                 sends_count += 1
                 time.sleep(delay_seconds)
-                add_log(account_id, group_id, f'Batch Message Sent [{sends_count}/{total_sends}]: {message[:50]}...', 'success')
+                add_log(account_id, group_id, f'Broadcast Message Sent [{sends_count}/{total_sends}]: {message[:50]}...', 'success')
                 logger.info(f"Message sent via account {account_id} to group {group_id} ({sends_count}/{total_sends})")
         
-        add_log(0, 'system', f'Batch {batch_name} completed - {total_sends} messages sent', 'success')
-        logger.info(f"Batch {batch_name} completed successfully")
+        add_log(0, 'system', f'Broadcast {batch_name} completed - {total_sends} messages sent', 'success')
+        logger.info(f"Broadcast {batch_name} completed successfully")
     except Exception as e:
         logger.error(f"Error in batch execution: {str(e)}")
-        add_log(0, 'system', f'Batch {batch_name} failed', 'error', str(e))
+        add_log(0, 'system', f'Broadcast {batch_name} failed', 'error', str(e))
 
 @app.route('/api/logs', methods=['GET'])
 def get_logs():
@@ -443,4 +451,5 @@ def health_check():
 if __name__ == '__main__':
     init_db()
     logger.info("Spider App Starting...")
+    logger.info("API ID/Hash will be saved ONCE on first launch and never asked again")
     app.run(debug=False, host='localhost', port=5000, threaded=True)
