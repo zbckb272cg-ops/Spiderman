@@ -198,6 +198,8 @@ body {
     border-radius: 10px;
     padding: 25px;
     margin-bottom: 25px;
+    max-height: 70vh;
+    overflow-y: auto;
 }
 
 .form-group {
@@ -245,6 +247,13 @@ body {
 
 .form-group.checkbox label {
     margin: 0;
+}
+
+.form-group small {
+    display: block;
+    color: var(--text-gray);
+    font-size: 12px;
+    margin-top: 5px;
 }
 
 input[type="range"] {
@@ -319,6 +328,15 @@ input[type="range"]::-moz-range-thumb {
     background: #555555;
 }
 
+.btn-warning {
+    background: var(--warning);
+    color: var(--secondary);
+}
+
+.btn-warning:hover {
+    background: #e6b800;
+}
+
 .btn-danger {
     background: var(--danger);
     color: var(--text-light);
@@ -332,10 +350,16 @@ input[type="range"]::-moz-range-thumb {
     width: 100%;
 }
 
+.btn-sm {
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
 /* Lists */
 .accounts-list,
 .tasks-list,
-.logs-list {
+.logs-list,
+.broadcasts-list {
     display: grid;
     gap: 15px;
 }
@@ -397,20 +421,84 @@ input[type="range"]::-moz-range-thumb {
     color: var(--text-gray);
     font-size: 13px;
     margin: 8px 0;
+    line-height: 1.5;
 }
 
 .list-item-actions {
     display: flex;
     gap: 10px;
     margin-top: 12px;
+    flex-wrap: wrap;
 }
 
 .list-item-actions .btn {
     flex: 1;
     padding: 8px 12px;
     font-size: 12px;
+    min-width: 80px;
 }
 
+/* Selection Controls */
+.checkbox-list {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 0, 0, 0.2);
+    border-radius: 6px;
+    padding: 15px;
+    max-height: 250px;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.checkbox-item:hover {
+    color: var(--primary);
+}
+
+.checkbox-item input[type="checkbox"] {
+    width: auto;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.selection-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.form-actions .btn {
+    flex: 1;
+}
+
+/* Toolbars */
+.accounts-toolbar,
+.logs-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.accounts-toolbar .btn,
+.logs-toolbar .btn {
+    flex: 1;
+    min-width: 150px;
+}
+
+/* Recent Activity */
 .recent-activity {
     margin-top: 30px;
 }
@@ -418,6 +506,29 @@ input[type="range"]::-moz-range-thumb {
 .recent-activity h2 {
     color: var(--primary);
     margin-bottom: 15px;
+}
+
+/* Settings */
+.settings-group {
+    background: rgba(255, 0, 0, 0.05);
+    border: 2px solid rgba(255, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.settings-group h2 {
+    color: var(--primary);
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.settings-group .form-group {
+    margin-bottom: 10px;
+}
+
+.settings-group .form-group label {
+    margin-bottom: 5px;
 }
 
 /* Animations */
@@ -441,6 +552,15 @@ input[type="range"]::-moz-range-thumb {
     }
 }
 
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(255, 0, 0, 0.8);
+    }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
     width: 10px;
@@ -460,6 +580,24 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 220px;
+    }
+    
+    .main-content {
+        padding: 20px;
+    }
+    
+    .list-item-actions {
+        flex-direction: column;
+    }
+    
+    .list-item-actions .btn {
+        width: 100%;
+    }
+}
+
 @media (max-width: 768px) {
     .sidebar {
         width: 200px;
@@ -471,5 +609,37 @@ input[type="range"]::-moz-range-thumb {
     
     .dashboard-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .tab-content h1 {
+        font-size: 24px;
+    }
+    
+    .btn {
+        padding: 10px 16px;
+        font-size: 12px;
+    }
+    
+    .form-container {
+        padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .sidebar {
+        width: 180px;
+    }
+    
+    .logo {
+        font-size: 18px;
+    }
+    
+    .nav-item {
+        padding: 10px 8px;
+        font-size: 12px;
+    }
+    
+    .dashboard-grid {
+        grid-template-columns: 1fr;
     }
 }
