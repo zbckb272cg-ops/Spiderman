@@ -39,7 +39,7 @@
                 <ul class="nav-menu">
                     <li><a href="#" onclick="showTab('dashboard', event)" class="nav-item active">📊 Dashboard</a></li>
                     <li><a href="#" onclick="showTab('accounts', event)" class="nav-item">👤 Accounts</a></li>
-                    <li><a href="#" onclick="showTab('tasks', event)" class="nav-item">📋 Tasks</a></li>
+                    <li><a href="#" onclick="showTab('broadcast', event)" class="nav-item">📢 Broadcast</a></li>
                     <li><a href="#" onclick="showTab('logs', event)" class="nav-item">📝 Logs</a></li>
                     <li><a href="#" onclick="showTab('settings', event)" class="nav-item">⚙️ Settings</a></li>
                 </ul>
@@ -62,8 +62,8 @@
                             <p id="total-groups" class="stat-number">0</p>
                         </div>
                         <div class="card">
-                            <h3>Running Tasks</h3>
-                            <p id="running-tasks" class="stat-number">0</p>
+                            <h3>Batch Messages</h3>
+                            <p id="batch-count" class="stat-number">0</p>
                         </div>
                         <div class="card">
                             <h3>Total Logs</h3>
@@ -78,8 +78,11 @@
 
                 <!-- Accounts Tab -->
                 <div id="accounts" class="tab-content">
-                    <h1>👤 Accounts</h1>
-                    <button onclick="showAddAccountForm()" class="btn btn-primary">+ Add Account</button>
+                    <h1>👤 Accounts Management</h1>
+                    <div class="accounts-toolbar">
+                        <button onclick="showAddAccountForm()" class="btn btn-primary">+ Add Account</button>
+                        <button onclick="loadAllAccountsGroups()" class="btn btn-secondary">⬇️ Load All Groups</button>
+                    </div>
                     <div id="add-account-form" class="form-container" style="display: none;">
                         <form id="account-form">
                             <div class="form-group">
@@ -101,47 +104,74 @@
                     <div id="accounts-list" class="accounts-list"></div>
                 </div>
 
-                <!-- Tasks Tab -->
-                <div id="tasks" class="tab-content">
-                    <h1>📋 Tasks</h1>
-                    <button onclick="showAddTaskForm()" class="btn btn-primary">+ Create Task</button>
-                    <div id="add-task-form" class="form-container" style="display: none;">
-                        <form id="task-form">
+                <!-- Broadcast Tab -->
+                <div id="broadcast" class="tab-content">
+                    <h1>📢 Broadcast Messages</h1>
+                    <button onclick="showBroadcastForm()" class="btn btn-primary">+ Create Broadcast</button>
+                    
+                    <div id="broadcast-form" class="form-container" style="display: none;">
+                        <form id="broadcast-message-form">
                             <div class="form-group">
-                                <label for="task-account">Select Account:</label>
-                                <select id="task-account" required></select>
+                                <label for="broadcast-name">Broadcast Name:</label>
+                                <input type="text" id="broadcast-name" placeholder="e.g., Daily Update" required>
                             </div>
+                            
                             <div class="form-group">
-                                <label for="task-group">Select Group:</label>
-                                <select id="task-group" required></select>
+                                <label>Select Accounts:</label>
+                                <div class="selection-controls">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllAccounts()">✓ Select All</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="deselectAllAccounts()">✗ Deselect All</button>
+                                </div>
+                                <div id="broadcast-accounts-list" class="checkbox-list"></div>
                             </div>
+                            
                             <div class="form-group">
-                                <label for="task-message">Message:</label>
-                                <textarea id="task-message" placeholder="Enter message" required></textarea>
+                                <label>Select Groups:</label>
+                                <div class="selection-controls">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllGroups()">✓ Select All</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="deselectAllGroups()">✗ Deselect All</button>
+                                </div>
+                                <div id="broadcast-groups-list" class="checkbox-list"></div>
                             </div>
+                            
                             <div class="form-group">
-                                <label for="task-delay">Delay (seconds): <span id="delay-value">5</span>s</label>
-                                <input type="range" id="task-delay" min="5" max="300" value="5" step="5">
+                                <label for="broadcast-message">Message:</label>
+                                <textarea id="broadcast-message" placeholder="Enter message to broadcast" required></textarea>
                             </div>
+                            
+                            <div class="form-group">
+                                <label for="broadcast-delay">Delay Between Messages (seconds): <span id="broadcast-delay-value">5</span>s</label>
+                                <input type="range" id="broadcast-delay" min="5" max="300" value="5" step="5">
+                                <small>Minimum: 5s | Maximum: 300s</small>
+                            </div>
+                            
                             <div class="form-group checkbox">
-                                <input type="checkbox" id="task-auto-repeat">
-                                <label for="task-auto-repeat">Auto Repeat</label>
+                                <input type="checkbox" id="broadcast-auto-repeat">
+                                <label for="broadcast-auto-repeat">Auto Repeat</label>
                             </div>
-                            <div class="form-group" id="repeat-interval-group" style="display: none;">
-                                <label for="task-repeat-interval">Repeat Interval (seconds):</label>
-                                <input type="number" id="task-repeat-interval" min="10" value="60" required>
+                            
+                            <div class="form-group" id="broadcast-repeat-group" style="display: none;">
+                                <label for="broadcast-repeat-interval">Repeat Interval (seconds):</label>
+                                <input type="number" id="broadcast-repeat-interval" min="10" value="60" required>
                             </div>
-                            <button type="submit" class="btn btn-success">Create Task</button>
-                            <button type="button" onclick="hideAddTaskForm()" class="btn btn-secondary">Cancel</button>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-success">Create & Schedule</button>
+                                <button type="button" onclick="hideBroadcastForm()" class="btn btn-secondary">Cancel</button>
+                            </div>
                         </form>
                     </div>
-                    <div id="tasks-list" class="tasks-list"></div>
+                    
+                    <div id="broadcasts-list" class="broadcasts-list"></div>
                 </div>
 
                 <!-- Logs Tab -->
                 <div id="logs" class="tab-content">
-                    <h1>📝 Logs</h1>
-                    <button onclick="refreshLogs()" class="btn btn-secondary">🔄 Refresh</button>
+                    <h1>📝 Activity Logs</h1>
+                    <div class="logs-toolbar">
+                        <button onclick="refreshLogs()" class="btn btn-secondary">🔄 Refresh</button>
+                        <button onclick="clearAllLogs()" class="btn btn-danger">🗑️ Clear Logs</button>
+                    </div>
                     <div id="logs-container" class="logs-list"></div>
                 </div>
 
@@ -156,11 +186,16 @@
                         </div>
                     </div>
                     <div class="settings-group">
-                        <h2>General</h2>
+                        <h2>General Settings</h2>
                         <div class="form-group checkbox">
                             <input type="checkbox" id="settings-auto-start">
-                            <label for="settings-auto-start">Auto Start Service</label>
+                            <label for="settings-auto-start">Auto Start Service on Launch</label>
                         </div>
+                    </div>
+                    <div class="settings-group">
+                        <h2>About</h2>
+                        <p>🕷️ Spider App v1.0 - Telegram Auto Message System</p>
+                        <p>Built with Telethon & Flask for multi-account broadcasting</p>
                     </div>
                 </div>
             </div>
