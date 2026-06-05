@@ -1,157 +1,234 @@
 # 🕷️ Spider App - Telegram Auto Message System
 
-A powerful PC software for managing Telegram accounts and automating group messages using Telethon and Flask.
+A professional PC software for managing multiple Telegram accounts and broadcasting messages to groups automatically using Telethon and Flask.
 
-## Features
+## ✨ Features
 
-✨ **Account Management**
-- Add multiple Telegram accounts
-- Persistent storage (auto-loads on app restart)
-- Active account tracking
+### 🎯 **Core Functionality**
+- ✅ **Multiple Account Management** - Add and manage unlimited Telegram accounts
+- ✅ **Group Loading** - Load groups one-by-one or all at once
+- ✅ **Batch Broadcasting** - Send messages to all accounts in all selected groups simultaneously
+- ✅ **Flexible Scheduling** - Delay: 5-300 seconds between messages
+- ✅ **Auto Repeat** - Automatically repeat messages at custom intervals
+- ✅ **Select All/Deselect All** - Quick selection for accounts and groups
+- ✅ **Activity Logging** - Real-time logging with auto-refresh
+- ✅ **Persistent Storage** - All data automatically saved and restored
 
-👥 **Group Management**
-- Load joined groups for each account
-- Track group members
-- Select multiple groups
+### 🎨 **User Interface**
+- Red & Black Spider theme with night mode optimization
+- Smooth animations and transitions
+- Fully responsive design
+- 5 main tabs: Dashboard | Accounts | Broadcast | Logs | Settings
+- All buttons fully functional and tested
+- Real-time dashboard with statistics
 
-📨 **Task Creation & Automation**
-- Create scheduled message tasks
-- Configurable delay: 5-300 seconds
-- Auto-repeat functionality with custom intervals
-- Real-time task management
-
-⏱️ **Scheduling Features**
-- Minimum 5 seconds delay
-- Maximum 300 seconds delay
-- Auto-repeat messages at set intervals
-- Start/Stop service directly from UI
-
-📊 **Dashboard & Monitoring**
-- Real-time statistics
-- Activity logs
-- Task status tracking
-- Error logging
-
-🎨 **Modern UI**
-- Red & Black spider theme
-- Night mode optimized
-- Smooth animations
-- Responsive design
-- All buttons fully functional
-
-💾 **Data Persistence**
-- SQLite database
-- Auto-save on close
-- Settings stored permanently
-- Complete state recovery
-
-🔐 **Security**
-- API ID & Hash encryption
-- One-time setup (hashed and removed after first use)
+### 🔒 **Security & Data**
+- First-time API setup wizard
+- Settings automatically saved and encrypted
+- SQLite database for persistence
 - Session management
+- Complete error handling
 
-## Installation
+## 📦 Installation
 
+### Option 1: Quick Start (Recommended)
 ```bash
 # Clone the repository
 git clone https://github.com/zbckb272cg-ops/spiderman.git
 cd spiderman
 
+# Run the startup script (ONE CLICK!)
+python start.py
+```
+
+### Option 2: Manual Start
+```bash
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the application
+# Start the application
 python app.py
 ```
 
-## Usage
+Then open your browser and visit: **http://localhost:5000**
 
-1. **First Time Setup**
-   - Enter your Telegram API ID and API Hash
-   - These are automatically saved and hidden after setup
-   - Enable auto-start if desired
+## 🚀 How to Use
 
-2. **Add Accounts**
-   - Go to Accounts tab
-   - Click "+ Add Account"
-   - Enter phone number and credentials
-   - Account will be saved permanently
+### 1. **Initial Setup**
+- Launch the app for the first time
+- Enter your Telegram API ID and API Hash
+- Settings are automatically saved and hidden
 
-3. **Create Tasks**
-   - Go to Tasks tab
-   - Click "Create Task"
-   - Select account and group
-   - Set message, delay (5-300s), and repeat options
-   - Task will run automatically
+### 2. **Add Accounts**
+- Go to **Accounts** tab
+- Click **"+ Add Account"**
+- Enter phone number and API credentials
+- Account is saved automatically
 
-4. **Monitor Activity**
-   - Check Logs tab for all activities
-   - Dashboard shows real-time statistics
-   - View success/error messages
+### 3. **Load Groups**
+- **Option A:** Load groups for single account
+  - Click the **"📥 Load Groups"** button next to the account
+  - Groups are loaded from Telegram
+  
+- **Option B:** Load groups for all accounts
+  - Click **"⬇️ Load All Groups"** button
+  - All groups from all accounts are loaded
 
-5. **Start Service**
-   - Click the "▶️ START SERVICE" button
-   - Service will start immediately
-   - All saved tasks will run
+### 4. **Create & Execute Broadcast**
+- Go to **Broadcast** tab
+- Click **"+ Create Broadcast"**
+- **Select Accounts:**
+  - Check accounts to include
+  - Use **"✓ Select All"** / **"✗ Deselect All"** buttons
+- **Select Groups:**
+  - Check groups to target
+  - Use **"✓ Select All"** / **"✗ Deselect All"** buttons
+- **Configure Message:**
+  - Enter message text
+  - Set delay (5-300 seconds)
+  - Enable auto-repeat if needed
+- **Execute:**
+  - Click **"Create & Schedule"** to save
+  - Click **"▶️ Execute Now"** to send immediately
 
-## Configuration
+### 5. **Monitor & Logs**
+- Go to **Logs** tab to see all activity
+- Dashboard shows real-time statistics
+- Auto-refresh every 5 seconds
 
-### settings.json
-```json
-{
-  "api_id": "your_api_id",
-  "api_hash": "your_api_hash",
-  "first_time": false,
-  "theme": "dark",
-  "auto_start": false
-}
-```
+## 🔧 Configuration
 
-## Database Structure
+### API Setup
+The app uses Telegram's Telethon library. You need:
+1. **API ID** - Get from https://my.telegram.org/apps
+2. **API Hash** - Get from https://my.telegram.org/apps
 
-- **accounts**: Stored Telegram accounts
-- **groups**: Groups for each account
-- **tasks**: Scheduled message tasks
-- **logs**: Activity and error logs
+These are entered during first-time setup and saved securely.
 
-## API Endpoints
+### Database
+- **File:** `spider_data.db` (SQLite)
+- **Backup:** Automatically created with each save
+- **Reset:** Delete the file to start fresh
 
+### Settings
+- **File:** `settings.json`
+- **Theme:** Dark (default) or Light
+- **Auto-start:** Optional service auto-start
+
+## 📊 Dashboard
+
+The dashboard displays:
+- **Active Accounts** - Number of active Telegram accounts
+- **Total Groups** - Total groups across all accounts
+- **Batch Messages** - Number of saved broadcasts
+- **Total Logs** - Activity log entries
+- **Recent Activity** - Latest operations
+
+## 📋 System Requirements
+
+- **OS:** Windows, Mac, or Linux
+- **Python:** 3.8 or higher
+- **Memory:** 512MB minimum
+- **Disk:** 200MB for application and database
+- **Internet:** Required (Telegram API calls)
+
+## 📝 Database Structure
+
+### Tables
+- `accounts` - Stored Telegram accounts and sessions
+- `groups` - Groups associated with each account
+- `batch_messages` - Saved broadcast configurations
+- `batch_accounts` - Account selections for broadcasts
+- `batch_groups` - Group selections for broadcasts
+- `logs` - Activity and operation logs
+
+## 🔌 API Endpoints
+
+- `GET /` - Main application page
 - `GET /api/settings/init` - Get initialization status
-- `POST /api/settings/save` - Save initial settings
-- `GET /api/accounts` - Get all accounts
+- `POST /api/settings/save` - Save settings
+- `GET /api/accounts` - List all accounts
 - `POST /api/accounts/add` - Add new account
-- `GET /api/accounts/<id>/groups` - Get account groups
-- `POST /api/groups/add` - Add group
-- `GET /api/tasks` - Get all tasks
-- `POST /api/tasks/add` - Create new task
+- `POST /api/accounts/load-all-groups` - Load groups for all accounts
+- `GET /api/accounts/<id>/load-groups` - Load groups for specific account
+- `GET /api/batch-messages` - List all broadcasts
+- `POST /api/batch-messages/create` - Create new broadcast
+- `POST /api/batch-messages/<id>/execute` - Execute broadcast
 - `GET /api/logs` - Get activity logs
-- `POST /api/start` - Start service
 
-## System Requirements
+## 🎓 Tips & Tricks
 
-- Python 3.8+
-- Windows/Mac/Linux
-- 200MB disk space
+### Performance
+- Keep delays at 10+ seconds to avoid rate limiting
+- Load groups before creating broadcasts
+- Check logs for success/error status
 
-## Default Access
+### Broadcasting
+- Test with one group first
+- Use delays to prevent account bans
+- Enable auto-repeat for recurring messages
+- Monitor logs during execution
 
-- **URL**: http://localhost:5000
-- **No login required** on first startup
-- Settings auto-saved
+### Maintenance
+- Regularly check logs for errors
+- Clear old logs periodically
+- Backup `spider_data.db` regularly
+- Keep settings.json safe
 
-## Ready for Production
+## ❌ Troubleshooting
 
-✅ No single issues
-✅ All buttons working
-✅ Error handling included
-✅ Data persistence guaranteed
-✅ Professional UI/UX
-✅ Ready to send to clients
+### App won't start
+- Ensure Python 3.8+ is installed
+- Check that port 5000 is not in use
+- Verify all files are in the correct directory
 
-## Support
+### Can't load groups
+- Verify API ID and Hash are correct
+- Check internet connection
+- Ensure account is added properly
+- Check logs for error messages
 
-For issues or questions, check the logs or contact support.
+### Broadcasts not sending
+- Verify groups are loaded
+- Check account selection
+- Review logs for failures
+- Ensure proper delays set
+
+### Performance issues
+- Clear old logs
+- Reduce number of concurrent broadcasts
+- Increase delays between messages
+- Check system resources
+
+## 📞 Support
+
+For issues or questions:
+1. Check the logs for detailed error information
+2. Verify all settings are correct
+3. Ensure internet connection is stable
+4. Restart the application
+
+## ⚖️ Legal Notice
+
+This software is for educational purposes. Users are responsible for:
+- Complying with Telegram's Terms of Service
+- Not using for spam or harassment
+- Obtaining proper consent from recipients
+- Following applicable laws and regulations
+
+## 📄 License
+
+This project is provided as-is for educational use.
+
+## 🙏 Credits
+
+Built with:
+- **Telethon** - Telegram client library
+- **Flask** - Web framework
+- **SQLite** - Database
 
 ---
 
-**Made with ❤️ using Telethon & Flask**
+**🕷️ Spider App v1.0** - Ready for Production ✅
+
+*No issues | All buttons working | Professional UI | Complete functionality*
