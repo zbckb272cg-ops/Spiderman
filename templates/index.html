@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider App - Telegram Auto Message</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div id="app-container">
+        <!-- Init Modal -->
+        <div id="init-modal" class="modal">
+            <div class="modal-content init-content">
+                <h2>🕷️ Spider App - First Time Setup</h2>
+                <form id="init-form">
+                    <div class="form-group">
+                        <label for="api-id">API ID:</label>
+                        <input type="text" id="api-id" placeholder="Enter your Telegram API ID" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="api-hash">API Hash:</label>
+                        <input type="password" id="api-hash" placeholder="Enter your Telegram API Hash" required>
+                    </div>
+                    <div class="form-group checkbox">
+                        <input type="checkbox" id="auto-start">
+                        <label for="auto-start">Auto Start on App Open</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save & Continue</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main App -->
+        <div id="main-app" style="display: none;">
+            <nav class="sidebar">
+                <div class="logo">
+                    <span>🕷️ Spider</span>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="#" onclick="showTab('dashboard', event)" class="nav-item active">📊 Dashboard</a></li>
+                    <li><a href="#" onclick="showTab('accounts', event)" class="nav-item">👤 Accounts</a></li>
+                    <li><a href="#" onclick="showTab('tasks', event)" class="nav-item">📋 Tasks</a></li>
+                    <li><a href="#" onclick="showTab('logs', event)" class="nav-item">📝 Logs</a></li>
+                    <li><a href="#" onclick="showTab('settings', event)" class="nav-item">⚙️ Settings</a></li>
+                </ul>
+                <div class="start-btn-container">
+                    <button id="start-btn" class="btn btn-success btn-block">▶️ START SERVICE</button>
+                </div>
+            </nav>
+
+            <div class="main-content">
+                <!-- Dashboard Tab -->
+                <div id="dashboard" class="tab-content active">
+                    <h1>📊 Dashboard</h1>
+                    <div class="dashboard-grid">
+                        <div class="card">
+                            <h3>Active Accounts</h3>
+                            <p id="active-accounts" class="stat-number">0</p>
+                        </div>
+                        <div class="card">
+                            <h3>Total Groups</h3>
+                            <p id="total-groups" class="stat-number">0</p>
+                        </div>
+                        <div class="card">
+                            <h3>Running Tasks</h3>
+                            <p id="running-tasks" class="stat-number">0</p>
+                        </div>
+                        <div class="card">
+                            <h3>Total Logs</h3>
+                            <p id="total-logs" class="stat-number">0</p>
+                        </div>
+                    </div>
+                    <div class="recent-activity">
+                        <h2>Recent Activity</h2>
+                        <div id="recent-logs" class="logs-list"></div>
+                    </div>
+                </div>
+
+                <!-- Accounts Tab -->
+                <div id="accounts" class="tab-content">
+                    <h1>👤 Accounts</h1>
+                    <button onclick="showAddAccountForm()" class="btn btn-primary">+ Add Account</button>
+                    <div id="add-account-form" class="form-container" style="display: none;">
+                        <form id="account-form">
+                            <div class="form-group">
+                                <label for="phone">Phone Number:</label>
+                                <input type="text" id="phone" placeholder="+1234567890" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="acc-api-id">API ID:</label>
+                                <input type="text" id="acc-api-id" placeholder="Your API ID" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="acc-api-hash">API Hash:</label>
+                                <input type="password" id="acc-api-hash" placeholder="Your API Hash" required>
+                            </div>
+                            <button type="submit" class="btn btn-success">Add Account</button>
+                            <button type="button" onclick="hideAddAccountForm()" class="btn btn-secondary">Cancel</button>
+                        </form>
+                    </div>
+                    <div id="accounts-list" class="accounts-list"></div>
+                </div>
+
+                <!-- Tasks Tab -->
+                <div id="tasks" class="tab-content">
+                    <h1>📋 Tasks</h1>
+                    <button onclick="showAddTaskForm()" class="btn btn-primary">+ Create Task</button>
+                    <div id="add-task-form" class="form-container" style="display: none;">
+                        <form id="task-form">
+                            <div class="form-group">
+                                <label for="task-account">Select Account:</label>
+                                <select id="task-account" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="task-group">Select Group:</label>
+                                <select id="task-group" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="task-message">Message:</label>
+                                <textarea id="task-message" placeholder="Enter message" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="task-delay">Delay (seconds): <span id="delay-value">5</span>s</label>
+                                <input type="range" id="task-delay" min="5" max="300" value="5" step="5">
+                            </div>
+                            <div class="form-group checkbox">
+                                <input type="checkbox" id="task-auto-repeat">
+                                <label for="task-auto-repeat">Auto Repeat</label>
+                            </div>
+                            <div class="form-group" id="repeat-interval-group" style="display: none;">
+                                <label for="task-repeat-interval">Repeat Interval (seconds):</label>
+                                <input type="number" id="task-repeat-interval" min="10" value="60" required>
+                            </div>
+                            <button type="submit" class="btn btn-success">Create Task</button>
+                            <button type="button" onclick="hideAddTaskForm()" class="btn btn-secondary">Cancel</button>
+                        </form>
+                    </div>
+                    <div id="tasks-list" class="tasks-list"></div>
+                </div>
+
+                <!-- Logs Tab -->
+                <div id="logs" class="tab-content">
+                    <h1>📝 Logs</h1>
+                    <button onclick="refreshLogs()" class="btn btn-secondary">🔄 Refresh</button>
+                    <div id="logs-container" class="logs-list"></div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settings" class="tab-content">
+                    <h1>⚙️ Settings</h1>
+                    <div class="settings-group">
+                        <h2>Theme</h2>
+                        <div class="form-group">
+                            <label><input type="radio" name="theme" value="dark" checked> Dark Theme</label>
+                            <label><input type="radio" name="theme" value="light"> Light Theme</label>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <h2>General</h2>
+                        <div class="form-group checkbox">
+                            <input type="checkbox" id="settings-auto-start">
+                            <label for="settings-auto-start">Auto Start Service</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
