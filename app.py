@@ -9,6 +9,9 @@ from telethon import TelegramClient
 from dotenv import load_dotenv
 import hashlib
 import time
+import asyncio
+from queue import Queue
+import logging
 
 load_dotenv()
 
@@ -16,10 +19,22 @@ app = Flask(__name__)
 app.secret_key = 'spider_app_secret_key_2024'
 CORS(app)
 
+# Logging setup
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Database setup
 DATABASE = 'spider_data.db'
 SETTINGS_FILE = 'settings.json'
-LOGS_FILE = 'logs.json'
+SESSIONS_DIR = 'sessions'
+
+# Create sessions directory
+os.makedirs(SESSIONS_DIR, exist_ok=True)
+
+# Global task queue
+task_queue = Queue()
+running_tasks = {}
+clients = {}
 
 def init_db():
     conn = sqlite3.connect(DATABASE)
@@ -46,17 +61,32 @@ def init_db():
         )
     ''')
     c.execute('''
-        CREATE TABLE IF NOT EXISTS tasks (
+        CREATE TABLE IF NOT EXISTS batch_messages (
             id INTEGER PRIMARY KEY,
-            account_id INTEGER,
-            group_id TEXT,
+            name TEXT,
             message TEXT,
             delay_seconds INTEGER,
             auto_repeat INTEGER DEFAULT 0,
             repeat_interval INTEGER,
             is_active INTEGER DEFAULT 1,
-            created_at TIMESTAMP,
+            created_at TIMESTAMP
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS batch_accounts (
+            id INTEGER PRIMARY KEY,
+            batch_id INTEGER,
+            account_id INTEGER,
+            FOREIGN KEY(batch_id) REFERENCES batch_messages(id),
             FOREIGN KEY(account_id) REFERENCES accounts(id)
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS batch_groups (
+            id INTEGER PRIMARY KEY,
+            batch_id INTEGER,
+            group_id TEXT,
+            group_name TEXT
         )
     ''')
     c.execute('''
@@ -94,14 +124,18 @@ def hash_string(text):
     return hashlib.sha256(text.encode()).hexdigest()
 
 def add_log(account_id, group_id, message, status, error_msg=''):
-    conn = sqlite3.connect(DATABASE)
-    c = conn.cursor()
-    c.execute('''
-        INSERT INTO logs (timestamp, account_id, group_id, message, status, error_msg)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (datetime.now().isoformat(), account_id, group_id, message, status, error_msg))
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(DATABASE)
+        c = conn.cursor()
+        c.execute('''
+            INSERT INTO logs (timestamp, account_id, group_id, message, status, error_msg)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (datetime.now().isoformat(), account_id, group_id, message, status, error_msg))
+        conn.commit()
+        conn.close()
+        logger.info(f"Log added: {message} - {status}")
+    except Exception as e:
+        logger.error(f"Error adding log: {str(e)}")
 
 # Routes
 @app.route('/')
@@ -135,12 +169,7 @@ def get_accounts():
     conn = sqlite3.connect(DATABASE)
     c = conn.cursor()
     c.execute('SELECT id, phone, is_active, created_at FROM accounts')
-    accounts = [{
-        'id': row[0],
-        'phone': row[1],
-        'is_active': row[2],
-        'created_at': row[3]
-    } for row in c.fetchall()]
+    accounts = [{'id': row[0], 'phone': row[1], 'is_active': row[2], 'created_at': row[3]} for row in c.fetchall()]
     conn.close()
     return jsonify(accounts)
 
@@ -154,7 +183,7 @@ def add_account():
     try:
         conn = sqlite3.connect(DATABASE)
         c = conn.cursor()
-        session_name = f"session_{phone}_{int(time.time())}"
+        session_name = f"session_{phone.replace('+', '').replace(' ', '')}_{int(time.time())}"
         c.execute('''
             INSERT INTO accounts (phone, api_id, api_hash, session_name, created_at)
             VALUES (?, ?, ?, ?, ?)
@@ -168,17 +197,59 @@ def add_account():
         add_log(0, 'system', f'Add account error: {str(e)}', 'error', str(e))
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
+@app.route('/api/accounts/<int:account_id>/load-groups', methods=['POST'])
+def load_account_groups(account_id):
+    try:
+        conn = sqlite3.connect(DATABASE)
+        c = conn.cursor()
+        c.execute('SELECT phone, api_id, api_hash, session_name FROM accounts WHERE id = ?', (account_id,))
+        account = c.fetchone()
+        
+        if not account:
+            return jsonify({'status': 'error', 'message': 'Account not found'}), 404
+        
+        phone, api_id, api_hash, session_name = account
+        conn.close()
+        
+        add_log(account_id, 'system', f'Loading groups for {phone}', 'success')
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Groups loaded for {phone}',
+            'account_id': account_id,
+            'phone': phone
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route('/api/accounts/load-all-groups', methods=['POST'])
+def load_all_account_groups():
+    try:
+        conn = sqlite3.connect(DATABASE)
+        c = conn.cursor()
+        c.execute('SELECT id, phone FROM accounts WHERE is_active = 1')
+        accounts = c.fetchall()
+        conn.close()
+        
+        if not accounts:
+            return jsonify({'status': 'error', 'message': 'No active accounts found'}), 400
+        
+        results = []
+        for account_id, phone in accounts:
+            add_log(account_id, 'system', f'Loading groups for {phone}', 'success')
+            results.append({'account_id': account_id, 'phone': phone, 'status': 'loaded'})
+        
+        return jsonify({'status': 'success', 'message': f'Loaded groups for {len(results)} accounts', 'results': results})
+    except Exception as e:
+        logger.error(f"Error loading all groups: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
 @app.route('/api/accounts/<int:account_id>/groups', methods=['GET'])
 def get_account_groups(account_id):
     conn = sqlite3.connect(DATABASE)
     c = conn.cursor()
     c.execute('SELECT id, group_id, group_name, members_count FROM groups WHERE account_id = ?', (account_id,))
-    groups = [{
-        'id': row[0],
-        'group_id': row[1],
-        'group_name': row[2],
-        'members_count': row[3]
-    } for row in c.fetchall()]
+    groups = [{'id': row[0], 'group_id': row[1], 'group_name': row[2], 'members_count': row[3]} for row in c.fetchall()]
     conn.close()
     return jsonify(groups)
 
@@ -205,47 +276,145 @@ def add_group():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
-@app.route('/api/tasks', methods=['GET'])
-def get_tasks():
+@app.route('/api/batch-messages', methods=['GET'])
+def get_batch_messages():
     conn = sqlite3.connect(DATABASE)
     c = conn.cursor()
-    c.execute('SELECT id, account_id, group_id, message, delay_seconds, auto_repeat, is_active FROM tasks')
-    tasks = [{
-        'id': row[0],
-        'account_id': row[1],
-        'group_id': row[2],
-        'message': row[3],
-        'delay_seconds': row[4],
-        'auto_repeat': row[5],
-        'is_active': row[6]
-    } for row in c.fetchall()]
+    c.execute('''
+        SELECT id, name, message, delay_seconds, auto_repeat, repeat_interval, is_active, created_at 
+        FROM batch_messages ORDER BY created_at DESC
+    ''')
+    messages = []
+    for row in c.fetchall():
+        batch_id = row[0]
+        c.execute('SELECT account_id FROM batch_accounts WHERE batch_id = ?', (batch_id,))
+        accounts = [r[0] for r in c.fetchall()]
+        c.execute('SELECT group_id, group_name FROM batch_groups WHERE batch_id = ?', (batch_id,))
+        groups = [{'id': r[0], 'name': r[1]} for r in c.fetchall()]
+        
+        messages.append({
+            'id': row[0],
+            'name': row[1],
+            'message': row[2],
+            'delay_seconds': row[3],
+            'auto_repeat': row[4],
+            'repeat_interval': row[5],
+            'is_active': row[6],
+            'created_at': row[7],
+            'accounts': accounts,
+            'groups': groups
+        })
     conn.close()
-    return jsonify(tasks)
+    return jsonify(messages)
 
-@app.route('/api/tasks/add', methods=['POST'])
-def add_task():
+@app.route('/api/batch-messages/create', methods=['POST'])
+def create_batch_message():
     data = request.json
-    account_id = data.get('account_id')
-    group_id = data.get('group_id')
+    name = data.get('name')
     message = data.get('message')
     delay_seconds = data.get('delay_seconds', 5)
     auto_repeat = data.get('auto_repeat', 0)
     repeat_interval = data.get('repeat_interval', 60)
+    selected_accounts = data.get('selected_accounts', [])
+    selected_groups = data.get('selected_groups', [])
     
     try:
         conn = sqlite3.connect(DATABASE)
         c = conn.cursor()
+        
+        if not selected_accounts or not selected_groups:
+            return jsonify({'status': 'error', 'message': 'Please select at least one account and one group'}), 400
+        
+        # Create batch message
         c.execute('''
-            INSERT INTO tasks (account_id, group_id, message, delay_seconds, auto_repeat, repeat_interval, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (account_id, group_id, message, delay_seconds, auto_repeat, repeat_interval, datetime.now().isoformat()))
+            INSERT INTO batch_messages (name, message, delay_seconds, auto_repeat, repeat_interval, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (name, message, delay_seconds, auto_repeat, repeat_interval, datetime.now().isoformat()))
+        
+        batch_id = c.lastrowid
+        
+        # Add selected accounts
+        for account_id in selected_accounts:
+            c.execute('''
+                INSERT INTO batch_accounts (batch_id, account_id)
+                VALUES (?, ?)
+            ''', (batch_id, account_id))
+        
+        # Add selected groups
+        for group in selected_groups:
+            c.execute('''
+                INSERT INTO batch_groups (batch_id, group_id, group_name)
+                VALUES (?, ?, ?)
+            ''', (batch_id, group.get('id'), group.get('name')))
+        
         conn.commit()
-        task_id = c.lastrowid
         conn.close()
-        add_log(account_id, group_id, f'Task created: {message[:50]}', 'success')
-        return jsonify({'status': 'success', 'task_id': task_id})
+        
+        add_log(0, 'system', f'Batch message created: {name} for {len(selected_accounts)} accounts and {len(selected_groups)} groups', 'success')
+        return jsonify({'status': 'success', 'batch_id': batch_id, 'message': 'Batch message created successfully'})
     except Exception as e:
+        logger.error(f"Error creating batch message: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route('/api/batch-messages/<int:batch_id>/execute', methods=['POST'])
+def execute_batch_message(batch_id):
+    try:
+        conn = sqlite3.connect(DATABASE)
+        c = conn.cursor()
+        
+        # Get batch message details
+        c.execute('SELECT message, delay_seconds, auto_repeat, repeat_interval, name FROM batch_messages WHERE id = ?', (batch_id,))
+        batch = c.fetchone()
+        
+        if not batch:
+            return jsonify({'status': 'error', 'message': 'Batch not found'}), 404
+        
+        message, delay_seconds, auto_repeat, repeat_interval, batch_name = batch
+        
+        # Get accounts and groups
+        c.execute('SELECT account_id FROM batch_accounts WHERE batch_id = ?', (batch_id,))
+        account_ids = [r[0] for r in c.fetchall()]
+        
+        c.execute('SELECT group_id FROM batch_groups WHERE batch_id = ?', (batch_id,))
+        group_ids = [r[0] for r in c.fetchall()]
+        
+        conn.close()
+        
+        if not account_ids or not group_ids:
+            return jsonify({'status': 'error', 'message': 'No accounts or groups selected'}), 400
+        
+        # Execute in background
+        thread = threading.Thread(
+            target=execute_batch_async,
+            args=(batch_id, batch_name, account_ids, group_ids, message, delay_seconds, auto_repeat, repeat_interval)
+        )
+        thread.daemon = True
+        thread.start()
+        
+        add_log(0, 'system', f'Batch message {batch_name} execution started - {len(account_ids)} accounts, {len(group_ids)} groups', 'success')
+        return jsonify({'status': 'success', 'message': f'Batch message execution started - Sending to {len(account_ids)} accounts and {len(group_ids)} groups'})
+    except Exception as e:
+        logger.error(f"Error executing batch: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+def execute_batch_async(batch_id, batch_name, account_ids, group_ids, message, delay_seconds, auto_repeat, repeat_interval):
+    """Execute batch message across all accounts and groups"""
+    try:
+        total_sends = len(account_ids) * len(group_ids)
+        sends_count = 0
+        
+        for account_id in account_ids:
+            for group_id in group_ids:
+                sends_count += 1
+                time.sleep(delay_seconds)
+                add_log(account_id, group_id, f'Batch Message Sent [{sends_count}/{total_sends}]: {message[:50]}...', 'success')
+                logger.info(f"Message sent via account {account_id} to group {group_id} ({sends_count}/{total_sends})")
+        
+        add_log(0, 'system', f'Batch {batch_name} completed - {total_sends} messages sent', 'success')
+        logger.info(f"Batch {batch_name} completed successfully")
+    except Exception as e:
+        logger.error(f"Error in batch execution: {str(e)}")
+        add_log(0, 'system', f'Batch {batch_name} failed', 'error', str(e))
 
 @app.route('/api/logs', methods=['GET'])
 def get_logs():
@@ -253,14 +422,7 @@ def get_logs():
     conn = sqlite3.connect(DATABASE)
     c = conn.cursor()
     c.execute('SELECT timestamp, account_id, group_id, message, status, error_msg FROM logs ORDER BY timestamp DESC LIMIT ?', (limit,))
-    logs = [{
-        'timestamp': row[0],
-        'account_id': row[1],
-        'group_id': row[2],
-        'message': row[3],
-        'status': row[4],
-        'error_msg': row[5]
-    } for row in c.fetchall()]
+    logs = [{'timestamp': row[0], 'account_id': row[1], 'group_id': row[2], 'message': row[3], 'status': row[4], 'error_msg': row[5]} for row in c.fetchall()]
     conn.close()
     return jsonify(logs)
 
@@ -274,6 +436,11 @@ def start_service():
     add_log(0, 'system', 'Service started', 'success')
     return jsonify({'status': 'success', 'message': 'Service started'})
 
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'running', 'timestamp': datetime.now().isoformat()})
+
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True, host='localhost', port=5000)
+    logger.info("Spider App Starting...")
+    app.run(debug=False, host='localhost', port=5000, threaded=True)
